@@ -92,6 +92,7 @@ public class CapitalTradeOrderServiceImpl implements CapitalTradeOrderService {
 
             capitalAccountRepository.save(transferToAccount);
         }
+//        throw new RuntimeException();
     }
 
     @Transactional
@@ -119,4 +120,45 @@ public class CapitalTradeOrderServiceImpl implements CapitalTradeOrderService {
             capitalAccountRepository.save(capitalAccount);
         }
     }
+    
+	@Override
+    @Compensable(confirmMethod = "confirmRecord", cancelMethod = "cancelRecord", transactionContextEditor = MethodTransactionContextEditor.class)
+    @Transactional
+	public String capiRecord(TransactionContext transactionContext, CapitalTradeOrderDto tradeOrderDto) {
+
+        try {
+            Thread.sleep(1000l);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
+        System.out.println("capital try record called. time seq:" + DateFormatUtils.format(Calendar.getInstance(), "yyyy-MM-dd HH:mm:ss"));
+
+        TradeOrder foundTradeOrder = tradeOrderRepository.findByMerchantOrderNo(tradeOrderDto.getMerchantOrderNo());
+
+        //check if trade order has been recorded, if yes, return success directly.
+        if (foundTradeOrder == null) {
+
+            TradeOrder tradeOrder = new TradeOrder(
+                    tradeOrderDto.getSelfUserId(),
+                    tradeOrderDto.getOppositeUserId(),
+                    tradeOrderDto.getMerchantOrderNo(),
+                    tradeOrderDto.getAmount()
+            );
+
+            try {
+                tradeOrderRepository.insert(tradeOrder);
+
+                CapitalAccount transferFromAccount = capitalAccountRepository.findByUserId(tradeOrderDto.getSelfUserId());
+
+                transferFromAccount.transferFrom(tradeOrderDto.getAmount());
+
+                capitalAccountRepository.save(transferFromAccount);
+            } catch (DataIntegrityViolationException e) {
+                //this exception may happen when insert trade order concurrently, if happened, ignore this insert operation.
+            }
+        }
+
+        return "success";
+	}
 }

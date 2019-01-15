@@ -118,4 +118,45 @@ public class RedPacketTradeOrderServiceImpl implements RedPacketTradeOrderServic
             redPacketAccountRepository.save(capitalAccount);
         }
     }
+
+    @Override
+    @Compensable(confirmMethod = "confirmRecord", cancelMethod = "cancelRecord", transactionContextEditor = MethodTransactionContextEditor.class)
+    @Transactional
+	public String redRecord(TransactionContext transactionContext, RedPacketTradeOrderDto tradeOrderDto) {
+    	 try {
+             Thread.sleep(1000l);
+         } catch (InterruptedException e) {
+             throw new RuntimeException(e);
+         }
+
+         System.out.println("red packet try record called. time seq:" + DateFormatUtils.format(Calendar.getInstance(), "yyyy-MM-dd HH:mm:ss"));
+
+         TradeOrder foundTradeOrder = tradeOrderRepository.findByMerchantOrderNo(tradeOrderDto.getMerchantOrderNo());
+
+         //check if the trade order has need recorded.
+         //if record, then this method call return success directly.
+         if (foundTradeOrder == null) {
+
+             TradeOrder tradeOrder = new TradeOrder(
+                     tradeOrderDto.getSelfUserId(),
+                     tradeOrderDto.getOppositeUserId(),
+                     tradeOrderDto.getMerchantOrderNo(),
+                     tradeOrderDto.getAmount()
+             );
+
+             try {
+                 tradeOrderRepository.insert(tradeOrder);
+
+                 RedPacketAccount transferFromAccount = redPacketAccountRepository.findByUserId(tradeOrderDto.getSelfUserId());
+
+                 transferFromAccount.transferFrom(tradeOrderDto.getAmount());
+
+                 redPacketAccountRepository.save(transferFromAccount);
+             } catch (DataIntegrityViolationException e) {
+
+             }
+         }
+
+         return "success";
+	}
 }

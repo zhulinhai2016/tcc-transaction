@@ -28,11 +28,26 @@ public class TradeOrderServiceProxy {
     */
     @Compensable(propagation = Propagation.SUPPORTS, confirmMethod = "record", cancelMethod = "record", transactionContextEditor = MethodTransactionContextEditor.class)
     public String record(TransactionContext transactionContext, CapitalTradeOrderDto tradeOrderDto) {
-        return capitalTradeOrderService.record(transactionContext, tradeOrderDto);
+    	System.out.println("+++++++++++++");
+    	return capitalTradeOrderService.record(transactionContext, tradeOrderDto);
     }
 
     @Compensable(propagation = Propagation.SUPPORTS, confirmMethod = "record", cancelMethod = "record", transactionContextEditor = MethodTransactionContextEditor.class)
     public String record(TransactionContext transactionContext, RedPacketTradeOrderDto tradeOrderDto) {
-        return redPacketTradeOrderService.record(transactionContext, tradeOrderDto);
+    	System.out.println("---------");
+    	return redPacketTradeOrderService.record(transactionContext, tradeOrderDto);
     }
+    
+    @Compensable(propagation = Propagation.SUPPORTS, confirmMethod = "record1", cancelMethod = "record1", transactionContextEditor = MethodTransactionContextEditor.class)
+    public String record1(TransactionContext transactionContext, CapitalTradeOrderDto tradeOrderDto) {
+    	System.out.println("+++++++++++++");
+    	return capitalTradeOrderService.capiRecord(transactionContext, tradeOrderDto);
+    }
+
+    @Compensable(propagation = Propagation.SUPPORTS, confirmMethod = "record2", cancelMethod = "record2", transactionContextEditor = MethodTransactionContextEditor.class)
+    public String record2(TransactionContext transactionContext, RedPacketTradeOrderDto tradeOrderDto) {
+    	System.out.println("---------");
+    	return redPacketTradeOrderService.redRecord(transactionContext, tradeOrderDto);
+    }
+    
 }

@@ -9,6 +9,7 @@ import org.mengyun.tcctransaction.sample.order.domain.repository.OrderRepository
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -34,8 +35,9 @@ public class PaymentServiceImpl {
         System.out.println("order try make payment called.time seq:" + DateFormatUtils.format(Calendar.getInstance(), "yyyy-MM-dd HH:mm:ss"));
 
         //check if the order status is DRAFT, if no, means that another call makePayment for the same order happened, ignore this call makePayment.
+        // TCC的try过程，修改订单
         if (order.getStatus().equals("DRAFT")) {
-
+        	// try过程中，冻结红包和资金账户金额，并修改状态为支付中...
             order.pay(redPacketPayAmount, capitalPayAmount);
             try {
                 orderRepository.updateOrder(order);
@@ -109,5 +111,23 @@ public class PaymentServiceImpl {
         tradeOrderDto.setOrderTitle(String.format("order no:%s", order.getMerchantOrderNo()));
 
         return tradeOrderDto;
+    }
+    
+    @Compensable(confirmMethod = "confirmMakePayment", cancelMethod = "cancelMakePayment", asyncConfirm = true)
+    @Transactional
+    public void makePay(Order order, BigDecimal redPacketPayAmount, BigDecimal capitalPayAmount){
+        System.out.println("order try make payment called.time seq:" + DateFormatUtils.format(Calendar.getInstance(), "yyyy-MM-dd HH:mm:ss"));
+        // TCC的try过程，修改订单
+        if (order.getStatus().equals("DRAFT")) {
+        	// try过程中，冻结红包和资金账户金额，并修改状态为支付中...
+            order.pay(redPacketPayAmount, capitalPayAmount);
+            try {
+                orderRepository.updateOrder(order);
+            } catch (OptimisticLockingFailureException e) {
+                //ignore the concurrently update order exception, ensure idempotency.
+            }
+        }
+        String result = tradeOrderServiceProxy.record1(null, buildCapitalTradeOrderDto(order));
+        String result2 = tradeOrderServiceProxy.record2(null, buildRedPacketTradeOrderDto(order));
     }
 }

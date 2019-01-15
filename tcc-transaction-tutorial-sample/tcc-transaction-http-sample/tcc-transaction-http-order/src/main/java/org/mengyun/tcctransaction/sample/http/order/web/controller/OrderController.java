@@ -87,7 +87,7 @@ public class OrderController {
 
         PlaceOrderRequest request = buildRequest(redPacketPayAmount, shopId, payerUserId, productId);
 
-        String merchantOrderNo = placeOrderService.placeOrder(request.getPayerUserId(), request.getShopId(),
+        String merchantOrderNo = placeOrderService.makeOrder(request.getPayerUserId(), request.getShopId(),
                 request.getProductQuantities(), request.getRedPacketPayAmount());
 
         return new RedirectView("payresult/" + merchantOrderNo);
